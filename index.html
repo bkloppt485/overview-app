@@ -2,6 +2,20 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
+    import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+    const fb = initializeApp({
+        apiKey: "AIzaSyD3plrFEXA-UBlL1XRQM0ygVByNdgXwZjY",
+        authDomain: "overview-762d8.firebaseapp.com",
+        projectId: "overview-762d8",
+        storageBucket: "overview-762d8.firebasestorage.app",
+        messagingSenderId: "770832892578",
+        appId: "1:770832892578:web:b5d74448a07f9d5c08cdfb"
+    });
+    const db = getFirestore(fb);
+    window._fb = { db, doc, setDoc, getDoc };
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#55ce55">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -859,7 +873,26 @@
 
     async function persistVault() {
         if (!_vault || !_cryptoKey) return;
-        localStorage.setItem('overview_vault', await encryptVault(_cryptoKey, _vault));
+        const encrypted = await encryptVault(_cryptoKey, _vault);
+        const salt = localStorage.getItem('overview_salt');
+        localStorage.setItem('overview_vault', encrypted);
+        // Sync to Firebase (fire & forget)
+        try {
+            if (window._fb) {
+                const { db, doc, setDoc } = window._fb;
+                await setDoc(doc(db, 'vaults', 'main'), { vault: encrypted, salt: salt, updated: Date.now() });
+            }
+        } catch(e) { console.warn('Firebase sync failed:', e); }
+    }
+
+    async function loadFromCloud() {
+        try {
+            if (!window._fb) return null;
+            const { db, doc, getDoc } = window._fb;
+            const snap = await getDoc(doc(db, 'vaults', 'main'));
+            if (snap.exists()) return snap.data();
+        } catch(e) { console.warn('Firebase load failed:', e); }
+        return null;
     }
 
     // ===================== DATA =====================
@@ -1362,9 +1395,20 @@
     }
     function setLockout(d) { localStorage.setItem('overview_lockout', JSON.stringify(d)); }
 
-    function initLock() {
-        const hasSalt = localStorage.getItem('overview_salt');
-        const hasVault = localStorage.getItem('overview_vault');
+    async function initLock() {
+        let hasSalt = localStorage.getItem('overview_salt');
+        let hasVault = localStorage.getItem('overview_vault');
+
+        // Kein lokaler Vault? Versuch aus Cloud zu laden
+        if (!hasSalt || !hasVault) {
+            const cloud = await loadFromCloud();
+            if (cloud && cloud.vault && cloud.salt) {
+                localStorage.setItem('overview_vault', cloud.vault);
+                localStorage.setItem('overview_salt', cloud.salt);
+                hasSalt = cloud.salt;
+                hasVault = cloud.vault;
+            }
+        }
 
         if (hasSalt && hasVault) {
             showLoginScreen();
@@ -1465,8 +1509,17 @@
         _cryptoKey = await deriveKey(pw, salt);
         _vault = migrateOldData();
 
-        localStorage.setItem('overview_salt', b64Enc(salt));
-        localStorage.setItem('overview_vault', await encryptVault(_cryptoKey, _vault));
+        const saltB64 = b64Enc(salt);
+        localStorage.setItem('overview_salt', saltB64);
+        const encrypted = await encryptVault(_cryptoKey, _vault);
+        localStorage.setItem('overview_vault', encrypted);
+        // Push to Cloud
+        try {
+            if (window._fb) {
+                const { db, doc, setDoc } = window._fb;
+                await setDoc(doc(db, 'vaults', 'main'), { vault: encrypted, salt: saltB64, updated: Date.now() });
+            }
+        } catch(e) { console.warn('Firebase initial sync failed:', e); }
         cleanOldData();
 
         document.getElementById('lockScreen').classList.add('hidden');
