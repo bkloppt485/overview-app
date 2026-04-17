@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#55ce55">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Overview">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <title>Overview — Lionel Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0f0f14;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 32px 40px;
+        }
+
+        /* --- Header --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 36px;
+        }
+        h1 { font-size: 2rem; font-weight: 300; color: #fff; margin-bottom: 4px; }
+        .subtitle { color: #888; font-size: 0.9rem; }
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+
+        /* --- Nav Row (tabs + filters inline) --- */
+        .nav-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .filter-pills {
+            display: flex;
+            gap: 4px;
+        }
+        .fpill {
+            font-size: 0.72rem;
+            padding: 5px 12px;
+            border-radius: 50px;
+            border: 1px solid #1e1e28;
+            background: transparent;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .fpill:hover { border-color: #444; color: #aaa; }
+        .fpill.active { border-color: #55ce55; color: #55ce55; background: rgba(85,206,85,0.08); }
+
+        /* --- Tabs --- */
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            background: #16161e;
+            border-radius: 12px;
+            padding: 4px;
+            width: fit-content;
+        }
+        .tab-btn {
+            padding: 8px 20px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn.active { background: #55ce55; color: #0f0f14; font-weight: 600; }
+        .tab-btn:hover:not(.active) { color: #aaa; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* --- Section Title --- */
+        .section-title {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #555;
+            margin-bottom: 20px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #1e1e28;
+        }
+
+        /* --- Project Cards --- */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 16px;
+            margin-bottom: 48px;
+        }
+
+        .project-card {
+            background: #16161e;
+            border: 1px solid #1e1e28;
+            border-radius: 14px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 3px;
+            background: var(--accent);
+        }
+        .project-card:hover {
+            border-color: #2a2a38;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .project-card.dimmed { opacity: 0.35; }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+        .card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        .category-label {
+            display: inline-block;
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .cat-website { background: rgba(85,206,85,0.15); color: #55ce55; }
+        .cat-app { background: rgba(59,130,246,0.15); color: #3b82f6; }
+        .cat-game { background: rgba(168,85,247,0.15); color: #a855f7; }
+        .cat-tool { background: rgba(255,244,80,0.15); color: #fff450; }
+        .cat-api { background: rgba(236,72,153,0.15); color: #ec4899; }
+
+        .project-name {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #fff;
+            margin: 8px 0 6px;
+        }
+
+        /* Status Dropdown */
+        .status-select {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 4px 10px;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 22px;
+        }
+        .status-aktiv { background: rgba(85,206,85,0.15); color: #55ce55; }
+        .status-bearbeitung { background: rgba(59,130,246,0.15); color: #3b82f6; }
+        .status-offen { background: rgba(255,244,80,0.15); color: #fff450; }
+        .status-pause { background: rgba(255,150,50,0.15); color: #ff9632; }
+        .status-fertig { background: rgba(100,100,255,0.15); color: #8888ff; }
+
+        .project-desc {
+            font-size: 0.85rem;
+            color: #777;
+            line-height: 1.6;
+            margin-bottom: 14px;
+        }
+
+        .project-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+        .meta-tag {
+            font-size: 0.72rem;
+            color: #555;
+            background: #1a1a24;
+            padding: 3px 10px;
+            border-radius: 6px;
+        }
+        .meta-tag a { color: #55ce55; text-decoration: none; }
+        .meta-tag a:hover { text-decoration: underline; }
+
+        .project-tech { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+        .tech-pill {
+            font-size: 0.68rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.04);
+            color: #888;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #1e1e28;
+        }
+        .card-date { font-size: 0.7rem; color: #444; }
+        .card-actions { display: flex; gap: 6px; }
+        .card-action-btn {
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #1e1e28;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .card-action-btn:hover { border-color: #55ce55; color: #55ce55; }
+        .card-action-btn.danger:hover { border-color: #ff4444; color: #ff4444; }
+
+        /* --- Priorität --- */
+        .priority-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+        }
+        .prio-hoch { background: #ff4444; }
+        .prio-mittel { background: #ff9632; }
+        .prio-niedrig { background: #55ce55; }
+
+        /* --- Add Card --- */
+        .add-card {
+            background: transparent;
+            border: 2px dashed #1e1e28;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #444;
+            font-size: 0.9rem;
+            text-decoration: none;
+        }
+        .add-card:hover { border-color: #55ce55; color: #55ce55; }
+
+        /* --- Modal --- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: #16161e;
+            border: 1px solid #2a2a38;
+            border-radius: 16px;
+            padding: 32px;
+            width: 520px;
+            max-width: 95vw;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal h2 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 24px;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        .form-input {
+            width: 100%;
+            background: #0f0f14;
+            border: 1px solid #1e1e28;
+            border-radius: 8px;
+            color: #ccc;
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 10px 14px;
+        }
+        .form-input:focus { outline: none; border-color: #55ce55; }
+        .form-input::placeholder { color: #333; }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+        select.form-input { appearance: none; cursor: pointer; }
+        textarea.form-input { min-height: 80px; resize: vertical; line-height: 1.5; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+        .btn-modal {
+            padding: 9px 22px;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-save { background: #55ce55; color: #0f0f14; }
+        .btn-save:hover { background: #3fb53f; }
+        .btn-cancel { background: transparent; color: #666; border: 1px solid #1e1e28; }
+        .btn-cancel:hover { border-color: #444; color: #aaa; }
+
+        /* --- Styles Section --- */
+        .styles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 48px;
+        }
+        .style-card {
+            background: #16161e;
+            border: 1px solid #1e1e28;
+            border-radius: 14px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+        .style-card:hover { border-color: #2a2a38; transform: translateY(-2px); }
+        .style-name { font-size: 1.1rem; font-weight: 600; color: #fff; margin-bottom: 12px; }
+        .style-colors { display: flex; gap: 8px; margin-bottom: 14px; }
+        .color-dot {
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            border: 2px solid #2a2a38;
+            position: relative;
+            cursor: pointer;
+        }
+        .color-dot::after {
+            content: attr(data-label);
+            position: absolute;
+            bottom: -18px; left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.58rem;
+            color: #555;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .color-dot:hover::after { opacity: 1; }
+        .style-features { list-style: none; }
+        .style-features li {
+            font-size: 0.8rem; color: #666;
+            padding: 2px 0 2px 16px;
+            position: relative;
+        }
+        .style-features li::before { content: '\2014'; position: absolute; left: 0; color: #333; }
+        .style-used { margin-top: 12px; font-size: 0.72rem; color: #444; }
+        .style-used span { color: #55ce55; }
+
+        /* --- Notes --- */
+        .notes-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 48px;
+        }
+        .note-box {
+            background: #16161e;
+            border: 1px solid #1e1e28;
+            border-radius: 14px;
+            padding: 20px;
+        }
+        .note-box h3 { font-size: 0.85rem; color: #ddd; margin-bottom: 10px; font-weight: 500; }
+        .note-textarea {
+            width: 100%; min-height: 130px;
+            background: #0f0f14;
+            border: 1px solid #1e1e28;
+            border-radius: 8px;
+            color: #bbb; font-family: inherit;
+            font-size: 0.82rem;
+            padding: 12px;
+            resize: vertical; line-height: 1.6;
+        }
+        .note-textarea:focus { outline: none; border-color: #55ce55; }
+        .note-textarea::placeholder { color: #2a2a38; }
+
+        /* --- Footer --- */
+        .dash-footer {
+            margin-top: 48px;
+            text-align: center;
+            color: #282828;
+            font-size: 0.75rem;
+        }
+
+        /* --- Floating Action --- */
+        .copilot-float {
+            position: fixed;
+            bottom: 24px; right: 24px;
+            background: linear-gradient(135deg, #55ce55, #3fb53f);
+            color: #0f0f14;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 22px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(85,206,85,0.3);
+            transition: all 0.3s;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 100;
+        }
+        .copilot-float:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(85,206,85,0.4);
+        }
+
+        /* --- Empty State --- */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #333;
+        }
+        .empty-state p { font-size: 0.9rem; margin-bottom: 8px; }
+
+        /* --- Responsive --- */
+        @media (max-width: 768px) {
+            body { padding: 20px; }
+            .projects-grid { grid-template-columns: 1fr; }
+            .notes-container { grid-template-columns: 1fr; }
+            .nav-row { flex-direction: column; align-items: flex-start; }
+        }
+
+        /* --- Feierabend Button --- */
+        .btn-feierabend {
+            padding: 9px 22px;
+            border-radius: 8px;
+            border: 1px solid #ff6b6b;
+            background: transparent;
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-feierabend:hover { background: rgba(255,107,107,0.1); }
+
+        /* --- Launch Button --- */
+        .btn-launch {
+            background: rgba(85,206,85,0.12) !important;
+            color: #55ce55 !important;
+            border-color: #55ce55 !important;
+            font-weight: 600 !important;
+        }
+        .btn-launch:hover { background: rgba(85,206,85,0.25) !important; }
+
+        /* --- Welcome Modal --- */
+        .welcome-modal {
+            text-align: center;
+            max-width: 520px;
+        }
+        .welcome-greeting {
+            font-size: 1.6rem;
+            font-weight: 300;
+            color: #fff;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        .welcome-greeting strong { color: #55ce55; font-weight: 600; }
+        .welcome-last {
+            background: #0f0f14;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            color: #888;
+            line-height: 1.6;
+        }
+        .welcome-last strong { color: #ccc; }
+        .welcome-tip {
+            font-size: 0.8rem;
+            color: #555;
+            margin-bottom: 24px;
+            padding: 12px 16px;
+            border-left: 2px solid #55ce55;
+            text-align: left;
+            line-height: 1.5;
+        }
+        .welcome-tip strong { color: #55ce55; }
+        .welcome-go {
+            padding: 12px 40px;
+            font-size: 1rem;
+            border-radius: 10px;
+        }
+
+        /* --- Goodbye Modal --- */
+        .goodbye-modal {
+            text-align: center;
+            max-width: 420px;
+        }
+        .goodbye-text {
+            font-size: 1.3rem;
+            font-weight: 300;
+            color: #fff;
+            line-height: 1.5;
+        }
+        .goodbye-text strong { color: #55ce55; }
+        .goodbye-text .bye-stats {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .goodbye-text .bye-stat {
+            text-align: center;
+        }
+        .goodbye-text .bye-num {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #55ce55;
+            display: block;
+        }
+        .goodbye-text .bye-label {
+            font-size: 0.7rem;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        /* --- Lock Screen --- */
+        .lock-screen {
+            position: fixed;
+            inset: 0;
+            background: #0a0a0f;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .lock-screen.hidden { display: none; }
+        .lock-box {
+            background: #16161e;
+            border: 1px solid #1e1e28;
+            border-radius: 20px;
+            padding: 48px 40px;
+            text-align: center;
+            max-width: 380px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .lock-icon { font-size: 2.5rem; margin-bottom: 16px; }
+        .lock-title { font-size: 1.3rem; font-weight: 300; color: #fff; margin-bottom: 8px; }
+        .lock-sub { font-size: 0.8rem; color: #555; margin-bottom: 28px; }
+        .lock-input {
+            width: 100%;
+            background: #0f0f14;
+            border: 1px solid #1e1e28;
+            border-radius: 10px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+            padding: 14px 18px;
+            text-align: center;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+        .lock-input:focus { outline: none; border-color: #55ce55; }
+        .lock-input.shake {
+            animation: shake 0.4s ease;
+            border-color: #ff4444;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .lock-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: #55ce55;
+            color: #0f0f14;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: background 0.2s;
+        }
+        .lock-btn:hover { background: #3fb53f; }
+        .lock-error {
+            font-size: 0.78rem;
+            color: #ff4444;
+            margin-top: 8px;
+            min-height: 20px;
+        }
+        .lock-hint {
+            font-size: 0.7rem;
+            color: #333;
+            margin-top: 20px;
+        }
+        .lock-setup-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Lock Screen -->
+    <div class="lock-screen" id="lockScreen">
+        <div class="lock-box" id="lockBox"></div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <h1>Overview</h1>
+            <p class="subtitle">Projekte, Stile & Ideen — Lionel</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-modal btn-save" onclick="openModal()">+ Neues Projekt</button>
+            <button class="btn-feierabend" onclick="feierabend()">Feierabend</button>
+        </div>
+    </div>
+
+    <!-- Welcome Modal -->
+    <div class="modal-overlay" id="welcomeOverlay">
+        <div class="modal welcome-modal">
+            <div class="welcome-greeting" id="welcomeGreeting"></div>
+            <div class="welcome-last" id="welcomeLast"></div>
+            <div class="welcome-tip" id="welcomeTip"></div>
+            <button class="btn-modal btn-save welcome-go" onclick="closeWelcome()">Los geht's</button>
+        </div>
+    </div>
+
+    <!-- Goodbye Modal -->
+    <div class="modal-overlay" id="goodbyeOverlay">
+        <div class="modal goodbye-modal">
+            <div class="goodbye-text" id="goodbyeText"></div>
+        </div>
+    </div>
+
+    <!-- Tabs + Filter in one line -->
+    <div class="nav-row">
+        <div class="tab-bar">
+            <button class="tab-btn active" data-tab="projekte">Projekte</button>
+            <button class="tab-btn" data-tab="stile">Stile</button>
+            <button class="tab-btn" data-tab="notizen">Notizen</button>
+        </div>
+        <div class="filter-pills" id="filterPills">
+            <button class="fpill active" data-filter-status="alle">Alle</button>
+            <button class="fpill" data-filter-status="aktiv">Aktiv</button>
+            <button class="fpill" data-filter-status="bearbeitung">In Bearb.</button>
+            <button class="fpill" data-filter-status="offen">Offen</button>
+            <button class="fpill" data-filter-status="fertig">Fertig</button>
+        </div>
+    </div>
+
+    <!-- ==================== PROJEKTE TAB ==================== -->
+    <div class="tab-content active" id="tab-projekte">
+        <div class="projects-grid" id="projectsGrid"></div>
+    </div>
+
+    <!-- ==================== STILE TAB ==================== -->
+    <div class="tab-content" id="tab-stile">
+        <div class="section-title">Gespeicherte Stile</div>
+        <div class="styles-grid">
+            <div class="style-card">
+                <div class="style-name">Lionel1</div>
+                <div class="style-colors">
+                    <div class="color-dot" style="background:#55ce55;" data-label="Primär"></div>
+                    <div class="color-dot" style="background:#fff450;" data-label="Akzent"></div>
+                    <div class="color-dot" style="background:#FF8000;" data-label="Lieferando"></div>
+                    <div class="color-dot" style="background:#1A1A1A;" data-label="Dunkel"></div>
+                    <div class="color-dot" style="background:#FAFBF7;" data-label="Hell"></div>
+                </div>
+                <ul class="style-features">
+                    <li>Einladend, familiär, professionell</li>
+                    <li>CSS-only Animationen (Pulse, Glow, Shimmer)</li>
+                    <li>4 gruppierte Menü-Tabs mit Highlights</li>
+                    <li>Gradient-Border auf Formularen</li>
+                    <li>Card-Hover mit Lift-Effekt</li>
+                    <li>Keine Emojis, Nummern sichtbar</li>
+                    <li>Reservierung + Lieferando prominent</li>
+                </ul>
+                <p class="style-used">Verwendet in: <span>Ince B83 Restaurant</span></p>
+            </div>
+            <div class="add-card" onclick="alert('Sag Copilot welchen Stil du speichern willst!')">+ Neuer Stil</div>
+        </div>
+    </div>
+
+    <!-- ==================== NOTIZEN TAB ==================== -->
+    <div class="tab-content" id="tab-notizen">
+        <div class="section-title">Notizen</div>
+        <div class="notes-container">
+            <div class="note-box">
+                <h3>Allgemeine Notizen</h3>
+                <textarea class="note-textarea" id="notesGeneral" placeholder="Gedanken, Links, Ideen..."></textarea>
+            </div>
+            <div class="note-box">
+                <h3>To-Do / Nächste Schritte</h3>
+                <textarea class="note-textarea" id="notesTodo" placeholder="Was steht als nächstes an?"></textarea>
+            </div>
+            <div class="note-box">
+                <h3>Gelerntes & Tipps</h3>
+                <textarea class="note-textarea" id="notesLearned" placeholder="Strg+Shift+R = Hard Reload&#10;CSS-only statt JS für Animationen&#10;..."></textarea>
+            </div>
+            <div class="note-box">
+                <h3>Kunden & Kontakte</h3>
+                <textarea class="note-textarea" id="notesContacts" placeholder="Namen, Anfragen, Wünsche..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: Neues Projekt ==================== -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h2 id="modalTitle">Neues Projekt</h2>
+            <input type="hidden" id="editId">
+            <div class="form-group">
+                <label>Projektname</label>
+                <input class="form-input" id="formName" placeholder="z.B. Café Milano Website">
+            </div>
+            <div class="form-group">
+                <label>Beschreibung</label>
+                <textarea class="form-input" id="formDesc" placeholder="Was soll das Projekt können?"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Typ</label>
+                    <select class="form-input" id="formType">
+                        <option value="website">Website</option>
+                        <option value="app">App</option>
+                        <option value="game">Game</option>
+                        <option value="tool">Tool</option>
+                        <option value="api">API</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select class="form-input" id="formStatus">
+                        <option value="offen">Offen</option>
+                        <option value="aktiv">Aktiv</option>
+                        <option value="bearbeitung">In Bearbeitung</option>
+                        <option value="pause">Pausiert</option>
+                        <option value="fertig">Fertig</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Priorität</label>
+                    <select class="form-input" id="formPrio">
+                        <option value="mittel">Mittel</option>
+                        <option value="hoch">Hoch</option>
+                        <option value="niedrig">Niedrig</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Stil (optional)</label>
+                    <input class="form-input" id="formStyle" placeholder="z.B. Lionel1">
+                </div>
+                <div class="form-group">
+                    <label>Link (optional)</label>
+                    <input class="form-input" id="formLink" placeholder="z.B. localhost:3000">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Tech-Stack (kommagetrennt)</label>
+                <input class="form-input" id="formTech" placeholder="HTML, CSS, JavaScript, Node.js">
+            </div>
+            <div class="form-group">
+                <label>Kunde / Für wen? (optional)</label>
+                <input class="form-input" id="formClient" placeholder="z.B. Restaurant XY, Eigenprojekt">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeModal()">Abbrechen</button>
+                <button class="btn-modal btn-save" onclick="saveProject()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Copilot -->
+    <a class="copilot-float" href="vscode://github.copilot-chat" title="Copilot öffnen">&#9889; Copilot</a>
+
+    <div class="dash-footer">Overview — Lionel | Alles wird lokal gespeichert</div>
+
+    <script>
+    // ===================== SECURITY: HTML ESCAPING =====================
+    function esc(str) {
+        if (!str) return '';
+        const d = document.createElement('div');
+        d.appendChild(document.createTextNode(String(str)));
+        return d.innerHTML;
+    }
+
+    function safeLink(url) {
+        if (!url) return '';
+        const trimmed = url.trim();
+        if (/^javascript:/i.test(trimmed) || /^data:/i.test(trimmed) || /^vbscript:/i.test(trimmed)) return '';
+        return trimmed.startsWith('http') ? trimmed : 'http://' + trimmed;
+    }
+
+    // ===================== CRYPTO VAULT ENGINE =====================
+    let _vault = null;
+    let _cryptoKey = null;
+
+    function b64Enc(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+    function b64Dec(str) { return Uint8Array.from(atob(str), c => c.charCodeAt(0)); }
+
+    async function deriveKey(password, salt) {
+        const raw = new TextEncoder().encode(password);
+        const material = await crypto.subtle.importKey('raw', raw, 'PBKDF2', false, ['deriveKey']);
+        return crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+            material,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt', 'decrypt']
+        );
+    }
+
+    async function encryptVault(key, data) {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const encoded = new TextEncoder().encode(JSON.stringify(data));
+        const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
+        const out = new Uint8Array(iv.length + ct.byteLength);
+        out.set(iv);
+        out.set(new Uint8Array(ct), iv.length);
+        return b64Enc(out);
+    }
+
+    async function decryptVault(key, b64) {
+        const raw = b64Dec(b64);
+        const iv = raw.slice(0, 12);
+        const ct = raw.slice(12);
+        const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+        return JSON.parse(new TextDecoder().decode(dec));
+    }
+
+    async function persistVault() {
+        if (!_vault || !_cryptoKey) return;
+        localStorage.setItem('overview_vault', await encryptVault(_cryptoKey, _vault));
+    }
+
+    // ===================== DATA =====================
+    const DEFAULTS = [
+        {
+            id: 1,
+            name: 'Ince B83 Restaurant',
+            desc: 'Professionelle Restaurant-Website. Türkische & Italienische Küche. Speisekarte, Reservierung, Lieferando, Google Maps.',
+            type: 'website',
+            status: 'aktiv',
+            priority: 'hoch',
+            style: 'Lionel1',
+            link: 'http://localhost:8888',
+            tech: ['HTML','CSS','JavaScript','Node.js','Lieferando','Google Maps'],
+            client: 'Ince Restaurant Melsungen',
+            created: '2026-04-15',
+            updated: '2026-04-16'
+        },
+        {
+            id: 2,
+            name: "Pharaoh's Fortune",
+            desc: 'Slot Machine im ägyptischen Stil. Auto-Spin, Euro-Multiplikator, Sound-Effekte, FS-Collection.',
+            type: 'game',
+            status: 'fertig',
+            priority: 'niedrig',
+            style: '',
+            link: 'http://localhost:8888',
+            tech: ['HTML','CSS','JavaScript','Node.js','Canvas','Audio API'],
+            client: 'Eigenprojekt',
+            created: '2026-04-14',
+            updated: '2026-04-15'
+        }
+    ];
+
+    function getProjects() {
+        if (!_vault || !Array.isArray(_vault.projects)) return [];
+        return _vault.projects.filter(p => p && typeof p === 'object' && p.id && p.name);
+    }
+    function saveProjects(p) {
+        if (!_vault) return;
+        _vault.projects = p;
+        persistVault();
+    }
+
+    // ===================== FILTERS =====================
+    let filterStatus = 'alle';
+
+    document.querySelectorAll('[data-filter-status]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-filter-status]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            filterStatus = btn.dataset.filterStatus;
+            renderProjects();
+        });
+    });
+
+    // ===================== RENDER =====================
+    const statusLabels = {
+        aktiv: 'Aktiv',
+        bearbeitung: 'In Bearbeitung',
+        offen: 'Offen',
+        pause: 'Pausiert',
+        fertig: 'Fertig'
+    };
+    const statusColors = {
+        aktiv: '#55ce55',
+        bearbeitung: '#3b82f6',
+        offen: '#fff450',
+        pause: '#ff9632',
+        fertig: '#8888ff'
+    };
+    const typeAccents = {
+        website: '#55ce55',
+        app: '#3b82f6',
+        game: '#a855f7',
+        tool: '#fff450',
+        api: '#ec4899'
+    };
+
+    function renderProjects() {
+        const projects = getProjects();
+        const grid = document.getElementById('projectsGrid');
+
+        // Sort: aktiv/bearbeitung first, then offen, then pause, then fertig
+        const statusOrder = { aktiv: 0, bearbeitung: 1, offen: 2, pause: 3, fertig: 4 };
+        const prioOrder = { hoch: 0, mittel: 1, niedrig: 2 };
+        const sorted = [...projects].sort((a, b) => {
+            const sd = statusOrder[a.status] - statusOrder[b.status];
+            if (sd !== 0) return sd;
+            return (prioOrder[a.priority] || 1) - (prioOrder[b.priority] || 1);
+        });
+
+        const filtered = sorted.filter(p => {
+            if (filterStatus !== 'alle' && p.status !== filterStatus) return false;
+            return true;
+        });
+
+        let html = filtered.map(p => {
+            const accent = typeAccents[esc(p.type)] || '#55ce55';
+            const safeType = esc(p.type);
+            const safeStatus = esc(p.status);
+            const safePrio = esc(p.priority);
+            const statusOpts = Object.entries(statusLabels).map(([k,v]) =>
+                `<option value="${esc(k)}" ${k === p.status ? 'selected' : ''}>${esc(v)}</option>`
+            ).join('');
+            const linkHref = safeLink(p.link);
+            const linkDisplay = linkHref ? esc(linkHref.replace(/^https?:\/\//, '')) : '';
+
+            return `
+            <div class="project-card ${p.status === 'fertig' ? 'dimmed' : ''}" style="--accent:${accent}">
+                <div class="card-top">
+                    <div class="card-badges">
+                        <span class="category-label cat-${safeType}">${safeType}</span>
+                        ${safePrio === 'hoch' ? '<span class="category-label" style="background:rgba(255,68,68,0.15);color:#ff4444">Priorit\u00e4t</span>' : ''}
+                    </div>
+                    <select class="status-select status-${safeStatus}" onchange="changeStatus(${parseInt(p.id) || 0}, this.value)">
+                        ${statusOpts}
+                    </select>
+                </div>
+                <div class="project-name">${esc(p.name)}</div>
+                <p class="project-desc">${esc(p.desc)}</p>
+                <div class="project-meta">
+                    ${p.style ? `<span class="meta-tag">Stil: <strong>${esc(p.style)}</strong></span>` : ''}
+                    ${linkHref ? `<span class="meta-tag"><a href="${esc(linkHref)}" target="_blank" rel="noopener noreferrer">${linkDisplay}</a></span>` : ''}
+                    ${p.client ? `<span class="meta-tag">${esc(p.client)}</span>` : ''}
+                </div>
+                <div class="project-tech">
+                    ${(p.tech || []).map(t => `<span class="tech-pill">${esc(t)}</span>`).join('')}
+                </div>
+                <div class="card-footer">
+                    <span class="card-date">
+                        <span class="priority-dot prio-${safePrio}"></span>
+                        Erstellt: ${esc(p.created) || '\u2014'} | Update: ${esc(p.updated) || '\u2014'}
+                    </span>
+                    <div class="card-actions">
+                        <button class="card-action-btn btn-launch" onclick="launchProject(${parseInt(p.id) || 0})">Starten</button>
+                        <button class="card-action-btn" onclick="editProject(${parseInt(p.id) || 0})">Bearbeiten</button>
+                        <button class="card-action-btn danger" onclick="deleteProject(${parseInt(p.id) || 0})">L\u00f6schen</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        html += `<div class="add-card" onclick="openModal()">+ Neues Projekt</div>`;
+
+        if (filtered.length === 0) {
+            html = `<div class="empty-state"><p>Keine Projekte für diesen Filter</p></div>` + html;
+        }
+
+        grid.innerHTML = html;
+    }
+
+    // ===================== STATUS CHANGE =====================
+    function changeStatus(id, newStatus) {
+        const validStatuses = ['offen','aktiv','bearbeitung','pause','fertig'];
+        if (!validStatuses.includes(newStatus)) return;
+        const projects = getProjects();
+        const p = projects.find(x => x.id === id);
+        if (p) {
+            p.status = newStatus;
+            p.updated = new Date().toISOString().split('T')[0];
+            saveProjects(projects);
+            renderProjects();
+        }
+    }
+
+    // ===================== MODAL =====================
+    function openModal() {
+        document.getElementById('editId').value = '';
+        document.getElementById('formName').value = '';
+        document.getElementById('formDesc').value = '';
+        document.getElementById('formType').value = 'website';
+        document.getElementById('formStatus').value = 'offen';
+        document.getElementById('formPrio').value = 'mittel';
+        document.getElementById('formStyle').value = '';
+        document.getElementById('formLink').value = '';
+        document.getElementById('formTech').value = '';
+        document.getElementById('formClient').value = '';
+        document.getElementById('modalTitle').textContent = 'Neues Projekt';
+        document.getElementById('modalOverlay').classList.add('open');
+        setTimeout(() => document.getElementById('formName').focus(), 100);
+    }
+
+    function closeModal() {
+        document.getElementById('modalOverlay').classList.remove('open');
+    }
+
+    function editProject(id) {
+        const p = getProjects().find(x => x.id === id);
+        if (!p) return;
+        document.getElementById('editId').value = id;
+        document.getElementById('formName').value = p.name;
+        document.getElementById('formDesc').value = p.desc;
+        document.getElementById('formType').value = p.type;
+        document.getElementById('formStatus').value = p.status;
+        document.getElementById('formPrio').value = p.priority || 'mittel';
+        document.getElementById('formStyle').value = p.style || '';
+        document.getElementById('formLink').value = p.link || '';
+        document.getElementById('formTech').value = (p.tech || []).join(', ');
+        document.getElementById('formClient').value = p.client || '';
+        document.getElementById('modalTitle').textContent = 'Projekt bearbeiten';
+        document.getElementById('modalOverlay').classList.add('open');
+    }
+
+    function saveProject() {
+        const name = document.getElementById('formName').value.trim().slice(0, 100);
+        if (!name || name.length < 2) { document.getElementById('formName').style.borderColor = '#ff4444'; return; }
+
+        const validTypes = ['website','app','game','tool','api'];
+        const validStatuses = ['offen','aktiv','bearbeitung','pause','fertig'];
+        const validPrios = ['hoch','mittel','niedrig'];
+
+        const projects = getProjects();
+        const editId = parseInt(document.getElementById('editId').value) || 0;
+        const today = new Date().toISOString().split('T')[0];
+        const techStr = document.getElementById('formTech').value.slice(0, 500);
+        const tech = techStr ? techStr.split(',').map(t => t.trim().slice(0, 50)).filter(Boolean).slice(0, 20) : [];
+        const typeVal = document.getElementById('formType').value;
+        const statusVal = document.getElementById('formStatus').value;
+        const prioVal = document.getElementById('formPrio').value;
+        const linkVal = document.getElementById('formLink').value.trim().slice(0, 200);
+
+        const data = {
+            name,
+            desc: document.getElementById('formDesc').value.trim().slice(0, 500),
+            type: validTypes.includes(typeVal) ? typeVal : 'website',
+            status: validStatuses.includes(statusVal) ? statusVal : 'offen',
+            priority: validPrios.includes(prioVal) ? prioVal : 'mittel',
+            style: document.getElementById('formStyle').value.trim().slice(0, 50),
+            link: safeLink(linkVal) ? linkVal : '',
+            tech,
+            client: document.getElementById('formClient').value.trim().slice(0, 100),
+            updated: today
+        };
+
+        if (editId) {
+            const idx = projects.findIndex(x => x.id === editId);
+            if (idx !== -1) { Object.assign(projects[idx], data); }
+        } else {
+            data.id = Date.now();
+            data.created = today;
+            projects.push(data);
+        }
+
+        saveProjects(projects);
+        closeModal();
+        renderProjects();
+    }
+
+    function deleteProject(id) {
+        if (!confirm('Projekt wirklich löschen?')) return;
+        const projects = getProjects().filter(x => x.id !== id);
+        saveProjects(projects);
+        renderProjects();
+    }
+
+    // Close modal on overlay click
+    document.getElementById('modalOverlay').addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeModal();
+    });
+
+    // ===================== TABS =====================
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            // Show filter pills only on projects tab
+            document.getElementById('filterPills').style.display = btn.dataset.tab === 'projekte' ? 'flex' : 'none';
+        });
+    });
+
+    // ===================== NOTES (auto-save to vault) =====================
+    const noteFieldMap = { notesGeneral: 'general', notesTodo: 'todo', notesLearned: 'learned', notesContacts: 'contacts' };
+
+    function loadNotesFromVault() {
+        if (!_vault || !_vault.notes) return;
+        for (const [elemId, field] of Object.entries(noteFieldMap)) {
+            const el = document.getElementById(elemId);
+            if (el) el.value = _vault.notes[field] || '';
+        }
+    }
+
+    Object.keys(noteFieldMap).forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('input', () => {
+            if (_vault) {
+                _vault.notes[noteFieldMap[id]] = el.value;
+                persistVault();
+            }
+        });
+    });
+
+    // ===================== KEYBOARD =====================
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { closeModal(); closeWelcome(); }
+        if (e.key === 'n' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'SELECT') {
+            openModal();
+        }
+    });
+
+    // ===================== PROJECT LAUNCH =====================
+    const projectFolders = {
+        'Ince B83 Restaurant': 'C:/Users/hanklide/ince-b83-restaurant',
+        "Pharaoh's Fortune": 'C:/Users/hanklide/pharaohs-fortune'
+    };
+
+    function launchProject(id) {
+        const p = getProjects().find(x => x.id === id);
+        if (!p) return;
+
+        // Track session in vault
+        if (_vault) {
+            _vault.session.lastProject = p.name;
+            _vault.session.lastActive = new Date().toISOString();
+            persistVault();
+        }
+        if (p.status === 'offen') changeStatus(id, 'bearbeitung');
+
+        // Open VS Code via protocol (works from browser)
+        const folder = projectFolders[p.name];
+        if (folder) {
+            window.location.href = 'vscode://file/' + folder;
+        }
+
+        // Show hint to use Start-Projekt.bat for full launch
+        const msg = document.createElement('div');
+        msg.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid #55ce55;color:#e0e0e0;padding:16px 28px;border-radius:12px;z-index:9999;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.5);text-align:center;max-width:420px;';
+        msg.innerHTML = '<div style="color:#55ce55;font-weight:700;margin-bottom:8px;">VS Code wird ge\u00f6ffnet \u2705</div><div>F\u00fcr Server + Browser:<br><strong>Start-Projekt.bat</strong> auf dem Desktop doppelklicken</div>';
+        document.body.appendChild(msg);
+        setTimeout(() => msg.remove(), 5000);
+    }
+
+    // ===================== FEIERABEND =====================
+    function feierabend() {
+        const now = new Date();
+        const projects = getProjects();
+        const active = projects.filter(p => p.status === 'aktiv' || p.status === 'bearbeitung');
+
+        if (_vault) {
+            _vault.session.lastSession = now.toISOString();
+            _vault.session.sessionCount = (_vault.session.sessionCount || 0) + 1;
+            persistVault();
+        }
+
+        const sessionStart = _vault ? _vault.session.sessionStart : null;
+        let duration = '';
+        if (sessionStart) {
+            const mins = Math.round((now - new Date(sessionStart)) / 60000);
+            if (mins < 60) duration = mins + ' Min.';
+            else duration = Math.floor(mins/60) + 'h ' + (mins%60) + 'min';
+        }
+
+        const hour = now.getHours();
+        let bye = hour >= 22 ? 'Gute Nacht' : hour >= 17 ? 'Sch\u00f6nen Feierabend' : 'Bis sp\u00e4ter';
+
+        document.getElementById('goodbyeText').innerHTML = `
+            <strong>${bye}, Lionel!</strong><br><br>
+            <div class="bye-stats">
+                <div class="bye-stat"><span class="bye-num">${projects.length}</span><span class="bye-label">Projekte</span></div>
+                <div class="bye-stat"><span class="bye-num">${active.length}</span><span class="bye-label">Aktiv</span></div>
+                ${duration ? `<div class="bye-stat"><span class="bye-num">${duration}</span><span class="bye-label">Session</span></div>` : ''}
+            </div>
+            <span style="font-size:0.85rem;color:#555">Alles gespeichert. Bis zum n\u00e4chsten Mal!</span>
+        `;
+        document.getElementById('goodbyeOverlay').classList.add('open');
+        setTimeout(() => {
+            document.getElementById('goodbyeOverlay').classList.remove('open');
+            // DOM säubern — keine Daten im HTML hinterlassen
+            document.getElementById('projectsGrid').innerHTML = '';
+            Object.keys(noteFieldMap).forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            document.getElementById('welcomeGreeting').textContent = '';
+            document.getElementById('welcomeLast').textContent = '';
+            document.getElementById('welcomeSuggestions').innerHTML = '';
+            document.getElementById('goodbyeText').textContent = '';
+            // Vault sperren — Daten aus RAM löschen
+            _vault = null;
+            _cryptoKey = null;
+            // Lock-Screen wieder anzeigen
+            document.getElementById('lockScreen').classList.remove('hidden');
+            showLoginScreen();
+        }, 4000);
+    }
+
+    // ===================== WELCOME =====================
+    function showWelcome() {
+        const s = _vault ? _vault.session : {};
+        const lastSession = s.lastSession || null;
+        const lastProject = s.lastProject || null;
+        const sessionCount = s.sessionCount || 0;
+        const projects = getProjects();
+        const active = projects.filter(p => p.status === 'aktiv' || p.status === 'bearbeitung');
+        const offen = projects.filter(p => p.status === 'offen');
+
+        // Greeting
+        const hour = new Date().getHours();
+        let greeting;
+        if (hour >= 5 && hour < 12) greeting = 'Guten Morgen';
+        else if (hour >= 12 && hour < 17) greeting = 'Moin';
+        else if (hour >= 17 && hour < 22) greeting = 'Guten Abend';
+        else greeting = 'Hey';
+
+        document.getElementById('welcomeGreeting').innerHTML = `${greeting}, <strong>Lionel</strong>`;
+
+        // Session info
+        let lastInfo = '';
+        if (lastSession) {
+            const diff = Math.round((Date.now() - new Date(lastSession)) / 3600000);
+            let ago = diff < 1 ? 'gerade eben' : diff < 24 ? 'vor ' + diff + 'h' : 'vor ' + Math.round(diff/24) + ' Tagen';
+            lastInfo += `Letzte Session: <strong>${ago}</strong><br>`;
+        }
+        if (lastProject) lastInfo += `Zuletzt: <strong>${lastProject}</strong><br>`;
+        if (active.length > 0) lastInfo += `<strong>${active.length}</strong> aktive Projekte warten auf dich`;
+        else if (offen.length > 0) lastInfo += `<strong>${offen.length}</strong> offene Projekte bereit zum Starten`;
+        else lastInfo += 'Keine offenen Projekte \u2014 Zeit f\u00fcr was Neues?';
+        document.getElementById('welcomeLast').innerHTML = lastInfo;
+
+        // Smart project suggestions based on what user has built
+        const hasWebsite = projects.some(p => p.type === 'website');
+        const hasGame = projects.some(p => p.type === 'game');
+        const techUsed = [...new Set(projects.flatMap(p => p.tech || []))];
+        const knowsHTML = techUsed.includes('HTML');
+        const knowsNode = techUsed.includes('Node.js');
+        const knowsCSS = techUsed.includes('CSS');
+
+        const suggestions = [];
+
+        // Based on restaurant website experience
+        if (hasWebsite) {
+            suggestions.push({
+                title: 'Noch eine Kunden-Website',
+                desc: 'Du hast mit Ince B83 bewiesen dass du Restaurant-Seiten kannst. Biete das anderen Lokalen in der Gegend an \u2014 Fris\u00f6re, Caf\u00e9s, Handwerker.'
+            });
+            suggestions.push({
+                title: 'Portfolio-Website',
+                desc: 'Erstell dir eine eigene Seite wo du deine Projekte zeigst. Kunden wollen sehen was du kannst bevor sie buchen.'
+            });
+        }
+
+        // Based on Node.js knowledge
+        if (knowsNode) {
+            suggestions.push({
+                title: 'Bestell-System / Backend',
+                desc: 'Du kennst Node.js schon. Bau ein richtiges Bestell-Backend mit Datenbank \u2014 das bringt dich auf ein neues Level.'
+            });
+        }
+
+        // Based on game experience
+        if (hasGame) {
+            suggestions.push({
+                title: 'Noch ein Browser-Game',
+                desc: 'Pharaoh\'s Fortune lief gut. Wie w\u00e4re ein Kartenspiel, Quiz-App oder Retro-Arcade? Games machen sich gut im Portfolio.'
+            });
+        }
+
+        // Based on CSS skills
+        if (knowsCSS) {
+            suggestions.push({
+                title: 'Landing Page Templates',
+                desc: 'Du bist gut in CSS. Erstell wiederverwendbare Templates die du f\u00fcr jeden Kunden anpassen kannst \u2014 spart dir sp\u00e4ter Zeit.'
+            });
+        }
+
+        // General next-level suggestions
+        suggestions.push({
+            title: 'Dashboard f\u00fcr Kunden',
+            desc: 'Ein Login-Bereich wo Restaurants ihre Speisekarte selbst pflegen k\u00f6nnen. Das w\u00e4re ein echtes SaaS-Produkt.'
+        });
+        suggestions.push({
+            title: 'Mobile App (React Native)',
+            desc: 'Mit deinem JavaScript-Wissen ist der Sprung zu React Native nicht weit. Eine Restaurant-App f\u00fcr iOS + Android.'
+        });
+
+        // Pick 2 random suggestions
+        const shuffled = suggestions.sort(() => Math.random() - 0.5);
+        const picked = shuffled.slice(0, 2);
+
+        document.getElementById('welcomeTip').innerHTML =
+            `<strong>N\u00e4chstes Projekt?</strong><br><br>` +
+            picked.map(s => `<div style="margin-bottom:12px"><strong style="color:#fff">${s.title}</strong><br><span style="color:#777">${s.desc}</span></div>`).join('');
+
+        if (_vault) {
+            _vault.session.sessionStart = new Date().toISOString();
+            persistVault();
+        }
+        document.getElementById('welcomeOverlay').classList.add('open');
+    }
+
+    function closeWelcome() {
+        document.getElementById('welcomeOverlay').classList.remove('open');
+    }
+
+    // ===================== INIT — ENCRYPTED VAULT =====================
+    initLock();
+
+    function getLockout() {
+        try { return JSON.parse(localStorage.getItem('overview_lockout')) || { count: 0, until: 0 }; }
+        catch { return { count: 0, until: 0 }; }
+    }
+    function setLockout(d) { localStorage.setItem('overview_lockout', JSON.stringify(d)); }
+
+    function initLock() {
+        const hasSalt = localStorage.getItem('overview_salt');
+        const hasVault = localStorage.getItem('overview_vault');
+
+        if (hasSalt && hasVault) {
+            showLoginScreen();
+        } else {
+            showSetupScreen();
+        }
+    }
+
+    function showSetupScreen() {
+        document.getElementById('lockBox').innerHTML = `
+            <div class="lock-icon">\uD83D\uDD10</div>
+            <div class="lock-title">Vault einrichten</div>
+            <div class="lock-sub">Alle Daten werden AES-256 verschl\u00fcsselt</div>
+            <div class="lock-setup-row">
+                <input class="lock-input" type="password" id="lockNew" placeholder="Passwort w\u00e4hlen" autocomplete="off">
+                <input class="lock-input" type="password" id="lockConfirm" placeholder="Best\u00e4tigen" autocomplete="off">
+            </div>
+            <div class="lock-error" id="lockError"></div>
+            <button class="lock-btn" onclick="setupPassword()">Verschl\u00fcsselung aktivieren</button>
+            <div class="lock-hint">Min. 6 Zeichen \u2014 PBKDF2 (100k) + AES-256-GCM</div>
+        `;
+        setTimeout(() => document.getElementById('lockNew').focus(), 100);
+        document.getElementById('lockConfirm').addEventListener('keydown', e => { if (e.key === 'Enter') setupPassword(); });
+    }
+
+    function showLoginScreen() {
+        const lockout = getLockout();
+        const now = Date.now();
+
+        if (lockout.until > now) {
+            const secs = Math.ceil((lockout.until - now) / 1000);
+            document.getElementById('lockBox').innerHTML = `
+                <div class="lock-icon">\u26D4</div>
+                <div class="lock-title">Gesperrt</div>
+                <div class="lock-sub">Zu viele Fehlversuche</div>
+                <div class="lock-error" style="color:#ff9632;min-height:20px">Wartezeit: ${secs}s</div>
+                <div class="lock-hint" style="color:#ff9632">${lockout.count} Fehlversuche</div>
+            `;
+            setTimeout(() => showLoginScreen(), Math.min(secs * 1000, 5000));
+            return;
+        }
+
+        document.getElementById('lockBox').innerHTML = `
+            <div class="lock-icon">\uD83D\uDD12</div>
+            <div class="lock-title">Overview</div>
+            <div class="lock-sub">AES-256 verschl\u00fcsselt</div>
+            <input class="lock-input" type="password" id="lockPw" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022" autocomplete="off">
+            <div class="lock-error" id="lockError"></div>
+            <button class="lock-btn" onclick="checkPassword()">Entsperren</button>
+            ${lockout.count > 0 ? `<div class="lock-hint" style="color:#ff9632">${lockout.count} Fehlversuch(e)</div>` : '<div class="lock-hint">Daten sind verschl\u00fcsselt gespeichert</div>'}
+        `;
+        setTimeout(() => document.getElementById('lockPw').focus(), 100);
+        document.getElementById('lockPw').addEventListener('keydown', e => { if (e.key === 'Enter') checkPassword(); });
+    }
+
+    function migrateOldData() {
+        const vault = {
+            projects: JSON.parse(JSON.stringify(DEFAULTS)),
+            notes: { general: '', todo: '', learned: '', contacts: '' },
+            session: { lastSession: '', lastProject: '', sessionCount: 0, sessionStart: '' },
+            version: '3'
+        };
+        try {
+            const old = localStorage.getItem('overview_projects');
+            if (old) { const p = JSON.parse(old); if (Array.isArray(p) && p.length) vault.projects = p; }
+        } catch {}
+        const nm = { notesGeneral: 'general', notesTodo: 'todo', notesLearned: 'learned', notesContacts: 'contacts' };
+        for (const [k, f] of Object.entries(nm)) { const v = localStorage.getItem('overview_' + k); if (v) vault.notes[f] = v; }
+        vault.session.lastSession = localStorage.getItem('overview_lastSession') || '';
+        vault.session.lastProject = localStorage.getItem('overview_lastProject') || '';
+        vault.session.sessionCount = parseInt(localStorage.getItem('overview_sessionCount') || '0');
+        return vault;
+    }
+
+    function cleanOldData() {
+        ['overview_projects','overview_version','overview_pwHash',
+         'overview_notesGeneral','overview_notesTodo','overview_notesLearned','overview_notesContacts',
+         'overview_lastSession','overview_lastProject','overview_sessionCount',
+         'overview_sessionStart','overview_lastActive'
+        ].forEach(k => localStorage.removeItem(k));
+        sessionStorage.removeItem('overview_unlocked');
+    }
+
+    async function setupPassword() {
+        const pw = document.getElementById('lockNew').value;
+        const confirm = document.getElementById('lockConfirm').value;
+        const errEl = document.getElementById('lockError');
+
+        if (pw.length < 6) { errEl.textContent = 'Mindestens 6 Zeichen!'; return; }
+        if (pw !== confirm) {
+            errEl.textContent = 'Passw\u00f6rter stimmen nicht \u00fcberein!';
+            document.getElementById('lockConfirm').classList.add('shake');
+            setTimeout(() => document.getElementById('lockConfirm').classList.remove('shake'), 500);
+            return;
+        }
+
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        _cryptoKey = await deriveKey(pw, salt);
+        _vault = migrateOldData();
+
+        localStorage.setItem('overview_salt', b64Enc(salt));
+        localStorage.setItem('overview_vault', await encryptVault(_cryptoKey, _vault));
+        cleanOldData();
+
+        document.getElementById('lockScreen').classList.add('hidden');
+        startDashboard();
+    }
+
+    async function checkPassword() {
+        const input = document.getElementById('lockPw');
+        const errEl = document.getElementById('lockError');
+        if (!input.value) { errEl.textContent = 'Passwort eingeben!'; return; }
+
+        try {
+            const salt = b64Dec(localStorage.getItem('overview_salt'));
+            const key = await deriveKey(input.value, salt);
+            _vault = await decryptVault(key, localStorage.getItem('overview_vault'));
+            _cryptoKey = key;
+
+            localStorage.removeItem('overview_lockout');
+            document.getElementById('lockScreen').classList.add('hidden');
+            startDashboard();
+        } catch {
+            const lockout = getLockout();
+            lockout.count++;
+            if (lockout.count >= 4) {
+                lockout.until = Date.now() + Math.min(Math.pow(2, lockout.count - 3) * 5000, 300000);
+            }
+            setLockout(lockout);
+
+            errEl.textContent = 'Falsches Passwort! (' + lockout.count + ')';
+            input.classList.add('shake');
+            input.value = '';
+            setTimeout(() => input.classList.remove('shake'), 500);
+
+            if (lockout.count >= 4) {
+                setTimeout(() => showLoginScreen(), 600);
+            } else {
+                setTimeout(() => input.focus(), 100);
+            }
+        }
+    }
+
+    function startDashboard() {
+        loadNotesFromVault();
+        renderProjects();
+        showWelcome();
+    }
+
+    // PWA Service Worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+    </script>
+
+</body>
+</html>
