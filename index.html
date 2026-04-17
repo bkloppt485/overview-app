@@ -15,6 +15,7 @@
     });
     const db = getFirestore(fb);
     window._fb = { db, doc, setDoc, getDoc };
+    window.dispatchEvent(new Event('fb-ready'));
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#55ce55">
@@ -1387,7 +1388,15 @@
     }
 
     // ===================== INIT — ENCRYPTED VAULT =====================
-    initLock();
+    // Warte auf Firebase bevor Init
+    function waitForFirebase() {
+        return new Promise(resolve => {
+            if (window._fb) return resolve();
+            const timer = setTimeout(() => resolve(), 4000); // Fallback nach 4s
+            window.addEventListener('fb-ready', () => { clearTimeout(timer); resolve(); }, { once: true });
+        });
+    }
+    waitForFirebase().then(() => initLock());
 
     function getLockout() {
         try { return JSON.parse(localStorage.getItem('overview_lockout')) || { count: 0, until: 0 }; }
